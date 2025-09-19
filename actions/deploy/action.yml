@@ -1,0 +1,208 @@
+name: 'Deploy Application'
+description: 'Reusable deployment action for PHP applications (Sylius, WordPress, Symfony)'
+author: 'Dedi Agency'
+
+inputs:
+  # Infrastructure
+  ssh_host:
+    description: 'SSH host for deployment'
+    required: true
+  ssh_username:
+    description: 'SSH username'
+    required: true
+  ssh_private_key:
+    description: 'SSH private key (defaults to secrets.SSH_PRIVATE_KEY if not provided)'
+    required: false
+    default: ${{ secrets.SSH_PRIVATE_KEY }}
+  ssh_port:
+    description: 'SSH port'
+    required: false
+    default: '22'
+
+  # Environment
+  environment:
+    description: 'Environment name (recette, preproduction, production)'
+    required: true
+  branch:
+    description: 'Git branch to deploy'
+    required: true
+  deploy_path:
+    description: 'Deployment path on server (auto-generated if not provided: $HOME/{environment}-{ssh_username})'
+    required: false
+  site_url:
+    description: 'Site URL for the environment (auto-generated if not provided: https://{environment}-{ssh_username}.dediagency.dev)'
+    required: false
+  app_env:
+    description: 'Application environment (auto-set based on environment: recette=test, preproduction=staging, production=prod)'
+    required: false
+
+  # Platform configuration
+  platform:
+    description: 'Platform type (sylius, wordpress, symfony)'
+    required: true
+  php_version:
+    description: 'PHP version to use'
+    required: false
+    default: '8.3'
+  php_binary:
+    description: 'PHP binary to use'
+    required: false
+    default: 'php8.3'
+  composer_path:
+    description: 'Path to composer binary'
+    required: false
+    default: '/usr/bin/composer'
+  node_version:
+    description: 'Node.js version requirement'
+    required: false
+    default: '18'
+  node_binary:
+    description: 'Node binary to use'
+    required: false
+    default: 'node'
+  npm_binary:
+    description: 'NPM binary to use'
+    required: false
+    default: 'npm'
+
+  # Build commands
+  composer_install_args:
+    description: 'Additional arguments for composer install'
+    required: false
+    default: '--no-dev --optimize-autoloader --no-interaction --no-scripts'
+  npm_install_command:
+    description: 'NPM install command'
+    required: false
+    default: 'npm install --silent'
+  build_command:
+    description: 'Build command for assets'
+    required: false
+    default: 'npm run build:prod'
+
+  # Database operations
+  db_operations:
+    description: 'Database operations to run (json array) - auto-set based on environment if not provided'
+    required: false
+
+  # Shared directories and files
+  shared_dirs:
+    description: 'Shared directories to symlink (json array)'
+    required: false
+    default: '["var/log", "var/storage", "public/media", "public/uploads"]'
+  shared_files:
+    description: 'Shared files to symlink (json array)'
+    required: false
+    default: '[".env.local"]'
+
+  # Cache and optimization
+  cache_commands:
+    description: 'Cache commands to run (json array) - auto-set based on environment if not provided'
+    required: false
+  asset_commands:
+    description: 'Asset commands to run (json array) - auto-set based on environment if not provided'
+    required: false
+
+  # Permissions
+  permission_method:
+    description: 'Permission method to use (chmod or setfacl)'
+    required: false
+    default: 'chmod'
+  file_permissions:
+    description: 'File permissions to set'
+    required: false
+    default: '755'
+  var_permissions:
+    description: 'Var directory permissions to set'
+    required: false
+    default: '775'
+  setfacl_user:
+    description: 'User for setfacl permissions (required if using setfacl)'
+    required: false
+    default: ''
+  setfacl_group:
+    description: 'Group for setfacl permissions (required if using setfacl)'
+    required: false
+    default: ''
+
+  # Post-deployment
+  run_post_deploy_cmd:
+    description: 'Run composer post-deploy-cmd scripts'
+    required: false
+    default: 'true'
+  post_deploy_commands:
+    description: 'Additional post-deploy commands to run (json array)'
+    required: false
+    default: '[]'
+
+  # Services
+  reload_services:
+    description: 'Services to reload after deployment (json array)'
+    required: false
+    default: '["php8.3-fpm"]'
+
+  # Repository
+  repository:
+    description: 'GitHub repository (owner/repo)'
+    required: false
+    default: ${{ github.repository }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Copy deployment script to server
+      uses: appleboy/scp-action@v0.1.5
+      with:
+        host: ${{ inputs.ssh_host }}
+        username: ${{ inputs.ssh_username }}
+        key: ${{ inputs.ssh_private_key }}
+        port: ${{ inputs.ssh_port }}
+        source: ".github/actions/deploy/deploy.sh"
+        target: "/tmp"
+        strip_components: 3
+
+    - name: Deploy to ${{ inputs.environment }}
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ inputs.ssh_host }}
+        username: ${{ inputs.ssh_username }}
+        key: ${{ inputs.ssh_private_key }}
+        port: ${{ inputs.ssh_port }}
+        script_stop: true
+        envs: DEPLOY_ENVIRONMENT,DEPLOY_BRANCH,DEPLOY_SSH_USERNAME,DEPLOY_PLATFORM,DEPLOY_PHP_VERSION,DEPLOY_PHP_BINARY,DEPLOY_COMPOSER_PATH,DEPLOY_NODE_BINARY,DEPLOY_NPM_BINARY,DEPLOY_REPOSITORY,DEPLOY_PERMISSION_METHOD,DEPLOY_FILE_PERMISSIONS,DEPLOY_VAR_PERMISSIONS,DEPLOY_SETFACL_USER,DEPLOY_SETFACL_GROUP,DEPLOY_RUN_POST_DEPLOY_CMD,DEPLOY_DEPLOY_PATH,DEPLOY_SITE_URL,DEPLOY_APP_ENV,DEPLOY_DB_OPERATIONS,DEPLOY_CACHE_COMMANDS,DEPLOY_ASSET_COMMANDS,DEPLOY_SHARED_DIRS,DEPLOY_SHARED_FILES,DEPLOY_RELOAD_SERVICES,DEPLOY_POST_DEPLOY_COMMANDS,DEPLOY_NPM_INSTALL_COMMAND,DEPLOY_BUILD_COMMAND,DEPLOY_COMPOSER_INSTALL_ARGS
+        script: |
+          export DEPLOY_ENVIRONMENT="${{ inputs.environment }}"
+          export DEPLOY_BRANCH="${{ inputs.branch }}"
+          export DEPLOY_SSH_USERNAME="${{ inputs.ssh_username }}"
+          export DEPLOY_PLATFORM="${{ inputs.platform }}"
+          export DEPLOY_PHP_VERSION="${{ inputs.php_version }}"
+          export DEPLOY_PHP_BINARY="${{ inputs.php_binary }}"
+          export DEPLOY_COMPOSER_PATH="${{ inputs.composer_path }}"
+          export DEPLOY_NODE_BINARY="${{ inputs.node_binary }}"
+          export DEPLOY_NPM_BINARY="${{ inputs.npm_binary }}"
+          export DEPLOY_REPOSITORY="${{ inputs.repository }}"
+          export DEPLOY_PERMISSION_METHOD="${{ inputs.permission_method }}"
+          export DEPLOY_FILE_PERMISSIONS="${{ inputs.file_permissions }}"
+          export DEPLOY_VAR_PERMISSIONS="${{ inputs.var_permissions }}"
+          export DEPLOY_SETFACL_USER="${{ inputs.setfacl_user }}"
+          export DEPLOY_SETFACL_GROUP="${{ inputs.setfacl_group }}"
+          export DEPLOY_RUN_POST_DEPLOY_CMD="${{ inputs.run_post_deploy_cmd }}"
+          export DEPLOY_DEPLOY_PATH="${{ inputs.deploy_path }}"
+          export DEPLOY_SITE_URL="${{ inputs.site_url }}"
+          export DEPLOY_APP_ENV="${{ inputs.app_env }}"
+          export DEPLOY_DB_OPERATIONS="${{ inputs.db_operations }}"
+          export DEPLOY_CACHE_COMMANDS="${{ inputs.cache_commands }}"
+          export DEPLOY_ASSET_COMMANDS="${{ inputs.asset_commands }}"
+          export DEPLOY_SHARED_DIRS="${{ inputs.shared_dirs }}"
+          export DEPLOY_SHARED_FILES="${{ inputs.shared_files }}"
+          export DEPLOY_RELOAD_SERVICES="${{ inputs.reload_services }}"
+          export DEPLOY_POST_DEPLOY_COMMANDS="${{ inputs.post_deploy_commands }}"
+          export DEPLOY_NPM_INSTALL_COMMAND="${{ inputs.npm_install_command }}"
+          export DEPLOY_BUILD_COMMAND="${{ inputs.build_command }}"
+          export DEPLOY_COMPOSER_INSTALL_ARGS="${{ inputs.composer_install_args }}"
+
+          chmod +x /tmp/deploy.sh
+          /tmp/deploy.sh
+          rm -f /tmp/deploy.sh

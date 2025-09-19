@@ -1,0 +1,9 @@
+{
+  "name": "Deploy",
+  "description": "Workflow for deploying to an environment",
+  "iconName": "rocket",
+  "categories": [
+    "deployment",
+    "php"
+  ]
+}

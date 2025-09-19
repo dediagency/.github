@@ -1,0 +1,34 @@
+# Exemple : Déploiement WordPress/Bedrock en Staging
+name: Deploy WordPress Staging
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging-monprojet-wp.dediagency.dev
+
+    steps:
+      - name: Deploy to staging
+        uses: dediagency/.github/actions/deploy@v0
+        with:
+          ssh_host: preprod.dediagency.net
+          ssh_username: monprojet-wp
+          environment: staging
+          branch: develop
+
+          # Configuration WordPress spécifique
+          platform: wordpress
+          shared_dirs: |
+            ["web/app/uploads"]
+          shared_files: |
+            [".env"]
+          run_post_deploy_cmd: false
+          post_deploy_commands: |
+            [
+              "wp cache flush --path=web/wp || echo 'WP-CLI not available'"
+            ]

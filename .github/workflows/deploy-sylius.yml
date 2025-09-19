@@ -1,0 +1,82 @@
+name: Deploy Sylius Application
+
+on:
+  workflow_call:
+    inputs:
+      # === OBLIGATOIRE - À personnaliser ===
+      ssh_username:
+        description: 'SSH username for deployment (ex: monprojet-sylius)'
+        required: true
+        type: string
+
+      project_name:
+        description: 'Project name for URL generation (ex: monprojet)'
+        required: true
+        type: string
+
+      environment:
+        description: 'Environment (recette, preproduction, production)'
+        required: true
+        type: string
+
+      # === OPTIONNEL - Surcharges si nécessaire ===
+      ssh_host:
+        description: 'SSH host (default: preprod.dediagency.net)'
+        required: false
+        type: string
+      custom_post_deploy:
+        description: 'Custom post-deploy commands (JSON array)'
+        required: false
+        type: string
+
+    secrets:
+      ssh_private_key:
+        description: 'SSH private key'
+        required: false
+
+    outputs:
+      deployment_url:
+        description: "URL of the deployed Sylius application"
+        value: ${{ jobs.deploy.outputs.deployment_url }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ format('https://{0}-{1}.dediagency.dev', inputs.environment, inputs.project_name) }}
+
+    outputs:
+      deployment_url: ${{ format('https://{0}-{1}.dediagency.dev', inputs.environment, inputs.project_name) }}
+
+    steps:
+      - name: Deploy Sylius to ${{ inputs.environment }}
+        uses: dediagency/.github/actions/deploy@v0
+        with:
+          # === Configuration spécifique Sylius ===
+          ssh_host: ${{ inputs.ssh_host || 'preprod.dediagency.net' }}
+          ssh_username: ${{ inputs.ssh_username }}
+          ssh_private_key: ${{ secrets.ssh_private_key }}
+          environment: ${{ inputs.environment }}
+
+          # Mapping environnement → branche (spécifique Sylius)
+          branch: ${{
+            inputs.environment == 'recette' && 'env/recette' ||
+            inputs.environment == 'preproduction' && 'env/preproduction' ||
+            inputs.environment == 'production' && 'master' ||
+            'env/recette'
+          }}
+
+          # Pré-configuration Sylius (l'action a déjà ces defaults intelligents)
+          platform: sylius
+          permission_method: setfacl
+          setfacl_user: www-data
+          setfacl_group: www-data
+
+          # Post-deploy avec health check automatique
+          post_deploy_commands: ${{
+            inputs.custom_post_deploy ||
+            format('[
+              "curl -f https://{0}-{1}.dediagency.dev/health || echo \"Health check failed for {0}\""
+            ]', inputs.environment, inputs.project_name)
+          }}

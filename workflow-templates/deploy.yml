@@ -1,0 +1,26 @@
+name: Deploy [ENVIRONMENT]
+
+on:
+  push:
+    branches:
+      - master
+      - env/preproduction
+      - env/recette
+
+concurrency: [ENVIRONMENT]_environment
+
+jobs:
+  deploy-[ENVIRONMENT]:
+    runs-on: ubuntu-latest
+    environment:
+      name: [ENVIRONMENT]
+      url: https://[ENVIRONMENT]-[USERNAME].dediagency.dev
+
+    steps:
+      - name: Deploy to [ENVIRONMENT]
+        uses: dediagency/.github/actions/deploy@v1
+        with:
+          platform: [PLATFORM]
+          ssh_host: [HOST]
+          ssh_username: [USERNAME]
+          environment: [ENVIRONMENT]
