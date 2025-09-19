@@ -1,0 +1,42 @@
+# Exemple : Déploiement Symfony en Production
+name: Deploy Symfony Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://monprojet-symfony.com
+
+    steps:
+      - name: Deploy to production
+        uses: dediagency/.github/actions/deploy@v0
+        with:
+          ssh_host: prod.dediagency.net
+          ssh_username: monprojet-symfony
+          environment: production
+          branch: main
+
+          # Configuration production
+          site_url: https://monprojet-symfony.com
+          deploy_path: /var/www/monprojet
+
+          # Sécurité renforcée en production
+          permission_method: setfacl
+          setfacl_user: www-data
+          setfacl_group: www-data
+
+          # Pas de fixtures en production
+          db_operations: |
+            ["doctrine:migrations:migrate --no-interaction"]
+
+          # Post-deploy avec health check
+          post_deploy_commands: |
+            [
+              "curl -f https://monprojet-symfony.com/health || echo 'Health check failed'",
+              "echo 'Production deployment completed'"
+            ]
