@@ -1,36 +1,34 @@
 # Dedi Agency - GitHub Organization
 
-Repository centralisé des GitHub Actions, workflows réutilisables et templates pour les projets Dedi Agency.
+Repository centralisé des GitHub Actions et templates communs aux projets Dedi Agency.
 
-## 🛠️ Structure
+## 🛠️ Actions (`actions/`)
 
-### 📦 Actions (`actions/`)
-Actions GitHub réutilisables de bas niveau.
+- **deploy/sylius** : action de déploiement Sylius (`dediagency/.github/actions/deploy/sylius@v1`)
+- **deploy/wordpress** : action de déploiement WordPress/Bedrock (`dediagency/.github/actions/deploy/wordpress@v1`)
 
-- **Deploy Action** : Action pour déploiement d'applications PHP
-  - Usage : `dediagency/.github/actions/deploy@v1`
-  - Documentation : [actions/deploy/README.md](actions/deploy/README.md)
+## 📋 Templates (`workflow-templates/`)
 
-### 🔄 Workflows réutilisables (`.github/workflows/`)
-Workflows réutilisables de niveau intermédiaire.
+- **deploy-sylius.yml** : workflow prêt à l'emploi pour un projet Sylius
+- **deploy-wordpress.yml** : workflow prêt à l'emploi pour un projet WordPress/Bedrock
 
-- **deploy-sylius.yml** : Workflow optimisé pour Sylius
-- **deploy-wordpress.yml** : Workflow optimisé pour WordPress/Bedrock
-- **deploy-reusable.yml** : Workflow générique configurable
+## 🚀 Exemple rapide (usage direct de l'action)
 
-### 📋 Templates de workflow (`workflow-templates/`)
-Templates de démarrage pour nouveaux projets.
+```yaml
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Sylius
+        uses: dediagency/.github/actions/deploy/sylius@v1
+        with:
+          ssh_host: my-host.example.com
+          ssh_username: project-sylius
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          environment: recette
+          branch: env/recette
+```
 
-- **deploy-sylius** : Template prêt à l'emploi pour projets Sylius
-- **deploy-wordpress** : Template prêt à l'emploi pour projets WordPress
-- **deploy-custom** : Template flexible pour projets custom
+Pour WordPress remplacez simplement l'action par `deploy/wordpress@v1` ou partez du template correspondant.
 
-## 🚀 Démarrage rapide
-
-1. **Nouveau projet Sylius** : Utilisez le template `deploy-sylius`
-2. **Nouveau projet WordPress** : Utilisez le template `deploy-wordpress`
-3. **Projet custom** : Utilisez le template `deploy-custom` ou les workflows réutilisables
-
----
-
-Pour plus d'informations, consultez la documentation de chaque composant.
+La documentation détaillée des paramètres se trouve dans `actions/deploy/README.md`.

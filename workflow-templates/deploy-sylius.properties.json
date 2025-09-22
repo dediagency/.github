@@ -1,0 +1,9 @@
+{
+  "name": "Deploy Sylius",
+  "description": "Workflow de déploiement pour une application Sylius",
+  "iconName": "rocket",
+  "categories": [
+    "deployment",
+    "php"
+  ]
+}

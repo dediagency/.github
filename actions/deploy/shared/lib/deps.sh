@@ -74,12 +74,26 @@ json_array_to_lines() {
         return 1
     fi
 
+    # Skip parsing if the payload does not look like a JSON array
+    if [ "${json:0:1}" = "'" ] && [ "${json: -1}" = "'" ]; then
+        json=${json:1:-1}
+    fi
+    local trimmed
+    trimmed=$(printf '%s' "$json" | tr -d '[:space:]')
+    if [ -z "$trimmed" ] || [ "${trimmed:0:1}" != "[" ]; then
+        return 1
+    fi
+
     case "$ARRAY_PARSER" in
         jq)
             echo "$json" | jq -r '.[]'
             ;;
         python3|python)
-            printf '%s' "$json" | "$ARRAY_PARSER" - <<'PY'
+            local output
+            if ! output=$(printf '%s' "$json" | "$ARRAY_PARSER" - <<'PY' 2>/dev/null); then
+                echo "⚠️  Skipping invalid JSON array: $json" >&2
+                return 1
+            fi
 import json
 import sys
 
@@ -92,9 +106,10 @@ for item in data:
     else:
         print(item)
 PY
+            printf '%s\n' "$output"
             ;;
         *)
-            echo "❌ ERROR: No JSON parser configured."
+            echo "⚠️  No JSON parser configured. Skipping array." >&2
             return 1
             ;;
     esac
@@ -145,7 +160,6 @@ deps_check() {
 
     if [ -n "$reload_services_json" ] && [ "$reload_services_json" != "[]" ]; then
         deps_require_command sudo
-        deps_require_command service
     fi
 
     deps_ensure_composer_available "$composer_path"

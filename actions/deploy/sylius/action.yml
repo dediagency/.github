@@ -1,9 +1,12 @@
-name: 'Deploy Application'
-description: 'Reusable deployment action for PHP applications (Sylius, WordPress, Symfony)'
+name: 'Deploy Sylius'
+description: 'Reusable deployment action for Sylius applications'
 author: 'Dedi Agency'
 
+defaults:
+  run:
+    shell: bash
+
 inputs:
-  # Infrastructure
   ssh_host:
     description: 'SSH host for deployment'
     required: true
@@ -18,7 +21,6 @@ inputs:
     required: false
     default: '22'
 
-  # Environment
   environment:
     description: 'Environment name (recette, preproduction, production)'
     required: true
@@ -32,13 +34,9 @@ inputs:
     description: 'Site URL for the environment (auto-generated if not provided: https://{environment}-{ssh_username}.dediagency.dev)'
     required: false
   app_env:
-    description: 'Application environment (auto-set based on environment: recette=test, preproduction=staging, production=prod)'
+    description: 'Application environment (auto-set based on environment)'
     required: false
 
-  # Platform configuration
-  platform:
-    description: 'Platform type (sylius, wordpress, symfony)'
-    required: true
   php_version:
     description: 'PHP version to use'
     required: false
@@ -64,7 +62,6 @@ inputs:
     required: false
     default: 'npm'
 
-  # Build commands
   composer_install_args:
     description: 'Additional arguments for composer install'
     required: false
@@ -72,36 +69,27 @@ inputs:
   npm_install_command:
     description: 'NPM install command'
     required: false
-    default: 'npm install --silent'
   build_command:
     description: 'Build command for assets'
     required: false
-    default: 'npm run build:prod'
 
-  # Database operations
   db_operations:
-    description: 'Database operations to run (json array) - auto-set based on environment if not provided'
+    description: 'Database operations to run (json array)'
     required: false
-
-  # Shared directories and files
   shared_dirs:
     description: 'Shared directories to symlink (json array)'
     required: false
-    default: '["var/log", "var/storage", "public/media", "public/uploads"]'
   shared_files:
     description: 'Shared files to symlink (json array)'
     required: false
-    default: '[".env.local"]'
 
-  # Cache and optimization
   cache_commands:
-    description: 'Cache commands to run (json array) - auto-set based on environment if not provided'
+    description: 'Cache commands to run (json array)'
     required: false
   asset_commands:
-    description: 'Asset commands to run (json array) - auto-set based on environment if not provided'
+    description: 'Asset commands to run (json array)'
     required: false
 
-  # Permissions
   permission_method:
     description: 'Permission method to use (chmod or setfacl)'
     required: false
@@ -123,7 +111,6 @@ inputs:
     required: false
     default: ''
 
-  # Post-deployment
   run_post_deploy_cmd:
     description: 'Run composer post-deploy-cmd scripts'
     required: false
@@ -133,13 +120,11 @@ inputs:
     required: false
     default: '[]'
 
-  # Services
   reload_services:
     description: 'Services to reload after deployment (json array)'
     required: false
     default: '["php8.3-fpm"]'
 
-  # Repository
   repository:
     description: 'GitHub repository (owner/repo)'
     required: false
@@ -152,12 +137,12 @@ runs:
       uses: actions/checkout@v4
 
     - name: Prepare deploy script
-      shell: bash
       run: |
         rm -rf .github-deploy
         mkdir -p .github-deploy
         cp "${GITHUB_ACTION_PATH}/deploy.sh" .github-deploy/deploy.sh
-        cp -R "${GITHUB_ACTION_PATH}/lib" .github-deploy/
+        cp -R "${GITHUB_ACTION_PATH}/lib" .github-deploy/lib
+        cp -R "${GITHUB_ACTION_PATH}/../shared" .github-deploy/shared
 
     - name: Copy deployment script to server
       uses: appleboy/scp-action@v0.1.5
@@ -172,47 +157,47 @@ runs:
 
     - name: Deploy to ${{ inputs.environment }}
       uses: appleboy/ssh-action@v1.0.3
+      env:
+        DEPLOY_PLATFORM: sylius
+        DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
+        DEPLOY_BRANCH: ${{ inputs.branch }}
+        DEPLOY_SSH_USERNAME: ${{ inputs.ssh_username }}
+        DEPLOY_PHP_VERSION: ${{ inputs.php_version }}
+        DEPLOY_PHP_BINARY: ${{ inputs.php_binary }}
+        DEPLOY_COMPOSER_PATH: ${{ inputs.composer_path }}
+        DEPLOY_NODE_BINARY: ${{ inputs.node_binary }}
+        DEPLOY_NPM_BINARY: ${{ inputs.npm_binary }}
+        DEPLOY_REPOSITORY: ${{ inputs.repository }}
+        DEPLOY_PERMISSION_METHOD: ${{ inputs.permission_method }}
+        DEPLOY_FILE_PERMISSIONS: ${{ inputs.file_permissions }}
+        DEPLOY_VAR_PERMISSIONS: ${{ inputs.var_permissions }}
+        DEPLOY_SETFACL_USER: ${{ inputs.setfacl_user }}
+        DEPLOY_SETFACL_GROUP: ${{ inputs.setfacl_group }}
+        DEPLOY_RUN_POST_DEPLOY_CMD: ${{ inputs.run_post_deploy_cmd }}
+        DEPLOY_DEPLOY_PATH: ${{ inputs.deploy_path }}
+        DEPLOY_SITE_URL: ${{ inputs.site_url }}
+        DEPLOY_APP_ENV: ${{ inputs.app_env }}
+        DEPLOY_DB_OPERATIONS: ${{ inputs.db_operations }}
+        DEPLOY_CACHE_COMMANDS: ${{ inputs.cache_commands }}
+        DEPLOY_ASSET_COMMANDS: ${{ inputs.asset_commands }}
+        DEPLOY_SHARED_DIRS: ${{ inputs.shared_dirs }}
+        DEPLOY_SHARED_FILES: ${{ inputs.shared_files }}
+        DEPLOY_RELOAD_SERVICES: ${{ inputs.reload_services }}
+        DEPLOY_POST_DEPLOY_COMMANDS: ${{ inputs.post_deploy_commands }}
+        DEPLOY_NPM_INSTALL_COMMAND: ${{ inputs.npm_install_command }}
+        DEPLOY_BUILD_COMMAND: ${{ inputs.build_command }}
+        DEPLOY_COMPOSER_INSTALL_ARGS: ${{ inputs.composer_install_args }}
       with:
         host: ${{ inputs.ssh_host }}
         username: ${{ inputs.ssh_username }}
         key: ${{ inputs.ssh_private_key }}
         port: ${{ inputs.ssh_port }}
         script_stop: true
-        envs: DEPLOY_ENVIRONMENT,DEPLOY_BRANCH,DEPLOY_SSH_USERNAME,DEPLOY_PLATFORM,DEPLOY_PHP_VERSION,DEPLOY_PHP_BINARY,DEPLOY_COMPOSER_PATH,DEPLOY_NODE_BINARY,DEPLOY_NPM_BINARY,DEPLOY_REPOSITORY,DEPLOY_PERMISSION_METHOD,DEPLOY_FILE_PERMISSIONS,DEPLOY_VAR_PERMISSIONS,DEPLOY_SETFACL_USER,DEPLOY_SETFACL_GROUP,DEPLOY_RUN_POST_DEPLOY_CMD,DEPLOY_DEPLOY_PATH,DEPLOY_SITE_URL,DEPLOY_APP_ENV,DEPLOY_DB_OPERATIONS,DEPLOY_CACHE_COMMANDS,DEPLOY_ASSET_COMMANDS,DEPLOY_SHARED_DIRS,DEPLOY_SHARED_FILES,DEPLOY_RELOAD_SERVICES,DEPLOY_POST_DEPLOY_COMMANDS,DEPLOY_NPM_INSTALL_COMMAND,DEPLOY_BUILD_COMMAND,DEPLOY_COMPOSER_INSTALL_ARGS
+        envs: DEPLOY_PLATFORM,DEPLOY_ENVIRONMENT,DEPLOY_BRANCH,DEPLOY_SSH_USERNAME,DEPLOY_PHP_VERSION,DEPLOY_PHP_BINARY,DEPLOY_COMPOSER_PATH,DEPLOY_NODE_BINARY,DEPLOY_NPM_BINARY,DEPLOY_REPOSITORY,DEPLOY_PERMISSION_METHOD,DEPLOY_FILE_PERMISSIONS,DEPLOY_VAR_PERMISSIONS,DEPLOY_SETFACL_USER,DEPLOY_SETFACL_GROUP,DEPLOY_RUN_POST_DEPLOY_CMD,DEPLOY_DEPLOY_PATH,DEPLOY_SITE_URL,DEPLOY_APP_ENV,DEPLOY_DB_OPERATIONS,DEPLOY_CACHE_COMMANDS,DEPLOY_ASSET_COMMANDS,DEPLOY_SHARED_DIRS,DEPLOY_SHARED_FILES,DEPLOY_RELOAD_SERVICES,DEPLOY_POST_DEPLOY_COMMANDS,DEPLOY_NPM_INSTALL_COMMAND,DEPLOY_BUILD_COMMAND,DEPLOY_COMPOSER_INSTALL_ARGS
         script: |
-          export DEPLOY_ENVIRONMENT="${{ inputs.environment }}"
-          export DEPLOY_BRANCH="${{ inputs.branch }}"
-          export DEPLOY_SSH_USERNAME="${{ inputs.ssh_username }}"
-          export DEPLOY_PLATFORM="${{ inputs.platform }}"
-          export DEPLOY_PHP_VERSION="${{ inputs.php_version }}"
-          export DEPLOY_PHP_BINARY="${{ inputs.php_binary }}"
-          export DEPLOY_COMPOSER_PATH="${{ inputs.composer_path }}"
-          export DEPLOY_NODE_BINARY="${{ inputs.node_binary }}"
-          export DEPLOY_NPM_BINARY="${{ inputs.npm_binary }}"
-          export DEPLOY_REPOSITORY="${{ inputs.repository }}"
-          export DEPLOY_PERMISSION_METHOD="${{ inputs.permission_method }}"
-          export DEPLOY_FILE_PERMISSIONS="${{ inputs.file_permissions }}"
-          export DEPLOY_VAR_PERMISSIONS="${{ inputs.var_permissions }}"
-          export DEPLOY_SETFACL_USER="${{ inputs.setfacl_user }}"
-          export DEPLOY_SETFACL_GROUP="${{ inputs.setfacl_group }}"
-          export DEPLOY_RUN_POST_DEPLOY_CMD="${{ inputs.run_post_deploy_cmd }}"
-          export DEPLOY_DEPLOY_PATH="${{ inputs.deploy_path }}"
-          export DEPLOY_SITE_URL="${{ inputs.site_url }}"
-          export DEPLOY_APP_ENV="${{ inputs.app_env }}"
-          export DEPLOY_DB_OPERATIONS="${{ inputs.db_operations }}"
-          export DEPLOY_CACHE_COMMANDS="${{ inputs.cache_commands }}"
-          export DEPLOY_ASSET_COMMANDS="${{ inputs.asset_commands }}"
-          export DEPLOY_SHARED_DIRS="${{ inputs.shared_dirs }}"
-          export DEPLOY_SHARED_FILES="${{ inputs.shared_files }}"
-          export DEPLOY_RELOAD_SERVICES="${{ inputs.reload_services }}"
-          export DEPLOY_POST_DEPLOY_COMMANDS="${{ inputs.post_deploy_commands }}"
-          export DEPLOY_NPM_INSTALL_COMMAND="${{ inputs.npm_install_command }}"
-          export DEPLOY_BUILD_COMMAND="${{ inputs.build_command }}"
-          export DEPLOY_COMPOSER_INSTALL_ARGS="${{ inputs.composer_install_args }}"
-
-          DEPLOY_SCRIPT_PATH="$HOME/.deploy/tmp/deploy.sh"
-          DEPLOY_LIB_PATH="$HOME/.deploy/tmp/lib"
+          DEPLOY_ROOT="$HOME/.deploy/tmp"
+          DEPLOY_SCRIPT_PATH="$DEPLOY_ROOT/deploy.sh"
           chmod +x "$DEPLOY_SCRIPT_PATH"
           "$DEPLOY_SCRIPT_PATH"
           rm -f "$DEPLOY_SCRIPT_PATH"
-          rm -rf "$DEPLOY_LIB_PATH"
+          rm -rf "$DEPLOY_ROOT/lib" "$DEPLOY_ROOT/shared"

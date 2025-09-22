@@ -39,8 +39,29 @@ commands_reload_services() {
         return
     fi
 
+    local service_cmd=""
+    if command -v service >/dev/null 2>&1; then
+        service_cmd="service"
+    elif command -v systemctl >/dev/null 2>&1; then
+        service_cmd="systemctl"
+    else
+        echo "⚠️  Skipping service reloads because neither 'service' nor 'systemctl' is available."
+        return
+    fi
+
     echo "♻️  Reloading services..."
     json_array_to_lines "$services_json" | while IFS= read -r service; do
-        sudo service "$service" reload 2>/dev/null || echo "⚠️  $service reload not available"
+        if [ -z "$service" ]; then
+            continue
+        fi
+        if [ "$service_cmd" = "service" ]; then
+            sudo service "$service" reload 2>/dev/null || echo "⚠️  $service reload not available"
+        else
+            if sudo systemctl reload "$service" 2>/dev/null; then
+                :
+            else
+                echo "⚠️  $service reload not available via systemctl"
+            fi
+        fi
     done
 }

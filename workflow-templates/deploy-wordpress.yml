@@ -1,0 +1,26 @@
+name: Deploy WordPress [ENVIRONMENT]
+
+on:
+  push:
+    branches:
+      - [BRANCH]
+
+concurrency: wordpress-[ENVIRONMENT]
+
+jobs:
+  deploy-[ENVIRONMENT]:
+    runs-on: ubuntu-latest
+    environment:
+      name: [ENVIRONMENT]
+      url: https://[ENVIRONMENT]-[USERNAME].dediagency.dev
+
+    steps:
+      - name: Deploy WordPress
+        uses: dediagency/.github/actions/deploy/wordpress@v1
+        with:
+          environment: [ENVIRONMENT]
+          branch: [BRANCH]
+          ssh_host: [HOST]
+          ssh_username: [USERNAME]
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          site_url: https://[ENVIRONMENT]-[USERNAME].dediagency.dev

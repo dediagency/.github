@@ -1,13 +1,11 @@
-name: Deploy [ENVIRONMENT]
+name: Deploy Sylius [ENVIRONMENT]
 
 on:
   push:
     branches:
-      - master
-      - env/preproduction
-      - env/recette
+      - [BRANCH]
 
-concurrency: [ENVIRONMENT]_environment
+concurrency: sylius-[ENVIRONMENT]
 
 jobs:
   deploy-[ENVIRONMENT]:
@@ -17,11 +15,12 @@ jobs:
       url: https://[ENVIRONMENT]-[USERNAME].dediagency.dev
 
     steps:
-      - name: Deploy to [ENVIRONMENT]
-        uses: dediagency/.github/actions/deploy@v1
+      - name: Deploy Sylius
+        uses: dediagency/.github/actions/deploy/sylius@v1
         with:
-          platform: [PLATFORM]
           environment: [ENVIRONMENT]
+          branch: [BRANCH]
           ssh_host: [HOST]
           ssh_username: [USERNAME]
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          site_url: https://[ENVIRONMENT]-[USERNAME].dediagency.dev

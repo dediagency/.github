@@ -1,0 +1,9 @@
+{
+  "name": "Deploy WordPress",
+  "description": "Workflow de déploiement pour un site WordPress/Bedrock",
+  "iconName": "globe",
+  "categories": [
+    "deployment",
+    "php"
+  ]
+}
