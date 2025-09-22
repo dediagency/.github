@@ -20,6 +20,7 @@ jobs:
           ssh_username: monprojet-symfony
           environment: production
           branch: main
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
 
           # Configuration production
           site_url: https://monprojet-symfony.com

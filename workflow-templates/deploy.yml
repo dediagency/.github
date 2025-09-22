@@ -21,6 +21,7 @@ jobs:
         uses: dediagency/.github/actions/deploy@v1
         with:
           platform: [PLATFORM]
+          environment: [ENVIRONMENT]
           ssh_host: [HOST]
           ssh_username: [USERNAME]
-          environment: [ENVIRONMENT]
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}

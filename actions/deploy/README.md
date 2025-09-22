@@ -38,10 +38,10 @@ jobs:
           ssh_username: monprojet-user
           environment: recette
           branch: env/recette
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
 
           # Tous les autres paramètres sont auto-générés :
           # ✅ Checkout automatique du code
-          # ✅ ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
           # ✅ deploy_path: $HOME/recette-monprojet-user
           # ✅ site_url: https://recette-monprojet-user.dediagency.dev
           # ✅ app_env: test (pour recette)

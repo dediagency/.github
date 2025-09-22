@@ -11,9 +11,8 @@ inputs:
     description: 'SSH username'
     required: true
   ssh_private_key:
-    description: 'SSH private key (defaults to secrets.SSH_PRIVATE_KEY if not provided)'
-    required: false
-    default: ${{ secrets.SSH_PRIVATE_KEY }}
+    description: 'SSH private key'
+    required: true
   ssh_port:
     description: 'SSH port'
     required: false
@@ -152,6 +151,14 @@ runs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Prepare deploy script
+      shell: bash
+      run: |
+        rm -rf .github-deploy
+        mkdir -p .github-deploy
+        cp "${GITHUB_ACTION_PATH}/deploy.sh" .github-deploy/deploy.sh
+        cp -R "${GITHUB_ACTION_PATH}/lib" .github-deploy/
+
     - name: Copy deployment script to server
       uses: appleboy/scp-action@v0.1.5
       with:
@@ -159,9 +166,9 @@ runs:
         username: ${{ inputs.ssh_username }}
         key: ${{ inputs.ssh_private_key }}
         port: ${{ inputs.ssh_port }}
-        source: ".github/actions/deploy/deploy.sh"
-        target: "/tmp"
-        strip_components: 3
+        source: ".github-deploy/*"
+        target: "~/.deploy/tmp/"
+        strip_components: 1
 
     - name: Deploy to ${{ inputs.environment }}
       uses: appleboy/ssh-action@v1.0.3
@@ -203,6 +210,9 @@ runs:
           export DEPLOY_BUILD_COMMAND="${{ inputs.build_command }}"
           export DEPLOY_COMPOSER_INSTALL_ARGS="${{ inputs.composer_install_args }}"
 
-          chmod +x /tmp/deploy.sh
-          /tmp/deploy.sh
-          rm -f /tmp/deploy.sh
+          DEPLOY_SCRIPT_PATH="$HOME/.deploy/tmp/deploy.sh"
+          DEPLOY_LIB_PATH="$HOME/.deploy/tmp/lib"
+          chmod +x "$DEPLOY_SCRIPT_PATH"
+          "$DEPLOY_SCRIPT_PATH"
+          rm -f "$DEPLOY_SCRIPT_PATH"
+          rm -rf "$DEPLOY_LIB_PATH"
