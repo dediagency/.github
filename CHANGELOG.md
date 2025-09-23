@@ -1,3 +1,18 @@
+## [0.1.0](https://github.com/dediagency/.github/compare/v0.0.1...v0.1.0) (2025-09-23)
+
+
+### Features
+
+* add deployment mutex system to prevent concurrent deployments ([9c4dd44](https://github.com/dediagency/.github/commit/9c4dd4437e0c68afbef84bc9eb83e056562042bd))
+* add preflight commands and deployment improvements ([0ea6467](https://github.com/dediagency/.github/commit/0ea646727091b63949e9d939e9b08bd1c44ef6e5))
+* add semantic versioning and automated release workflow ([9b0dd4c](https://github.com/dediagency/.github/commit/9b0dd4cfcd10ee7cf14466da2946add365f28b4b))
+* refactor deployment actions with shared libraries and enhanced error handling ([42aa0c6](https://github.com/dediagency/.github/commit/42aa0c6f4538636cbfdd0423dd8d39b4203ea4a4))
+
+
+### Bug Fixes
+
+* add missing conventional-changelog-conventionalcommits dependency ([4732cf5](https://github.com/dediagency/.github/commit/4732cf57d62824a04cfc9f0abf1bc61412ffa20c))
+
 ## [1.1.2](https://github.com/dediagency/.github/compare/v1.1.1...v1.1.2) (2025-09-23)
 
 
