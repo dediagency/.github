@@ -90,22 +90,25 @@ json_array_to_lines() {
             ;;
         python3|python)
             local output
-            if ! output=$(printf '%s' "$json" | "$ARRAY_PARSER" - <<'PY' 2>/dev/null); then
-                echo "⚠️  Skipping invalid JSON array: $json" >&2
-                return 1
-            fi
+            output=$(printf '%s' "$json" | "$ARRAY_PARSER" -c "
 import json
 import sys
 
-data = json.load(sys.stdin)
-if not isinstance(data, list):
-    raise SystemExit("JSON value is not an array")
-for item in data:
-    if isinstance(item, (list, dict)):
-        print(json.dumps(item))
-    else:
-        print(item)
-PY
+try:
+    data = json.load(sys.stdin)
+    if not isinstance(data, list):
+        sys.exit(1)
+    for item in data:
+        if isinstance(item, (list, dict)):
+            print(json.dumps(item))
+        else:
+            print(item)
+except:
+    sys.exit(1)
+" 2>/dev/null) || {
+                echo "⚠️  Skipping invalid JSON array: $json" >&2
+                return 1
+            }
             printf '%s\n' "$output"
             ;;
         *)

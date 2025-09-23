@@ -31,7 +31,7 @@ config_apply_base_defaults() {
     if [ -z "${DEPLOY_APP_ENV:-}" ]; then
         case "${DEPLOY_ENVIRONMENT}" in
             recette)
-                DEPLOY_APP_ENV="test"
+                DEPLOY_APP_ENV="staging"
                 ;;
             preproduction|preprod)
                 DEPLOY_APP_ENV="staging"

@@ -1,12 +1,16 @@
 #!/bin/bash
 
 run_deploy() {
-    local timestamp release_dir shared_root current_link previous_release
+    local timestamp release_dir shared_root current_link previous_release mutex_file
 
     timestamp=$(get_timestamp)
     release_dir="$DEPLOY_DEPLOY_PATH/releases/$timestamp"
     shared_root="$DEPLOY_DEPLOY_PATH/shared"
     current_link="$DEPLOY_DEPLOY_PATH/current"
+    mutex_file="$HOME/.deploy/deploy.lock"
+
+    # Le mutex est maintenant vérifié AVANT la copie des scripts via SSH dans l'action GitHub
+    # Cette fonction crée le mutex une fois sur le serveur
 
     # Sauvegarder la release précédente pour rollback
     if [ -L "$current_link" ]; then
@@ -16,7 +20,7 @@ run_deploy() {
         previous_release=""
     fi
 
-    # Fonction de rollback
+    # Fonction de rollback avec nettoyage mutex
     rollback() {
         log "error" "Deployment failed, attempting rollback..."
 
@@ -38,11 +42,22 @@ run_deploy() {
             log "error" "No previous release available for rollback"
         fi
 
+        # Libérer le mutex même en cas d'erreur
+        log "info" "🔓 Releasing deployment mutex (rollback)"
+        rm -f "$mutex_file"
+
         exit 1
     }
 
-    # Configurer le trap pour rollback en cas d'erreur
+    # Fonction de nettoyage pour libérer le mutex en cas d'interruption
+    cleanup_mutex() {
+        log "info" "🔓 Releasing deployment mutex (cleanup)"
+        rm -f "$mutex_file"
+    }
+
+    # Configurer les traps
     trap rollback ERR
+    trap cleanup_mutex EXIT INT TERM
 
     deps_check \
         "$DEPLOY_PHP_BINARY" \
@@ -143,22 +158,8 @@ run_deploy() {
 
     commands_run_post_deploy "$DEPLOY_POST_DEPLOY_COMMANDS"
 
-    # Créer un symlink temporaire pour les tests
-    log "info" "🔄 Creating temporary symlink for testing..."
-    ln -sfn "$release_dir" "$current_link.test"
-
-    # Health check avant activation définitive
-    if [ -n "${DEPLOY_SITE_URL:-}" ]; then
-        log "info" "🏥 Running health check..."
-        if health_check "$DEPLOY_SITE_URL" 5 10; then
-            log "info" "✅ Health check passed"
-        else
-            log "warn" "⚠️  Health check failed, but continuing deployment"
-        fi
-    fi
-
     log "info" "🔄 Updating current symlink..."
-    mv "$current_link.test" "$current_link.tmp"
+    ln -sfn "$release_dir" "$current_link.tmp"
     mv "$current_link.tmp" "$current_link"
 
     commands_reload_services "$DEPLOY_RELOAD_SERVICES"
@@ -167,12 +168,15 @@ run_deploy() {
     cd "$DEPLOY_DEPLOY_PATH/releases"
     ls -t | tail -n +4 | xargs -r rm -rf
 
-    # Désactiver le trap maintenant que le déploiement est réussi
+    # Désactiver les traps maintenant que le déploiement est réussi
     trap - ERR
+    trap - EXIT INT TERM
 
     log "info" "✅ Deployment completed successfully!"
     log "info" "🌐 Site available at: ${DEPLOY_SITE_URL}"
 
-    # Nettoyage final
-    [ -f "$current_link.test" ] && rm -f "$current_link.test"
+    # Libérer le mutex de façon explicite (succès)
+    log "info" "🔓 Releasing deployment mutex (success)"
+    rm -f "$mutex_file"
+
 }

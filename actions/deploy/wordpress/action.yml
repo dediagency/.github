@@ -142,12 +142,51 @@ runs:
       uses: actions/checkout@v4
 
     - name: Prepare deploy script
+      shell: bash
       run: |
         rm -rf .github-deploy
         mkdir -p .github-deploy
         cp "${GITHUB_ACTION_PATH}/deploy.sh" .github-deploy/deploy.sh
         cp -R "${GITHUB_ACTION_PATH}/lib" .github-deploy/lib
         cp -R "${GITHUB_ACTION_PATH}/../shared" .github-deploy/shared
+
+    - name: Check deployment mutex
+      uses: appleboy/ssh-action@v1.0.3
+      env:
+        DEPLOY_PLATFORM: wordpress
+        DEPLOY_ENVIRONMENT: ${{ inputs.environment }}
+      with:
+        host: ${{ inputs.ssh_host }}
+        username: ${{ inputs.ssh_username }}
+        key: ${{ inputs.ssh_private_key }}
+        port: ${{ inputs.ssh_port }}
+        script_stop: true
+        envs: DEPLOY_PLATFORM,DEPLOY_ENVIRONMENT
+        script: |
+          MUTEX_FILE="$HOME/.deploy/deploy.lock"
+
+          echo "🔒 Checking deployment mutex..."
+
+          if [ -f "$MUTEX_FILE" ]; then
+            LOCK_INFO=$(cat "$MUTEX_FILE" 2>/dev/null || echo "unknown")
+            LOCK_TIME=$(stat -c %Y "$MUTEX_FILE" 2>/dev/null || echo "0")
+            LOCK_AGE=$(($(date +%s) - LOCK_TIME))
+
+            # Si le lock est très ancien (plus de 1h), on le considère comme stale
+            if [ $LOCK_AGE -gt 3600 ]; then
+              echo "⚠️  Stale deployment lock detected (${LOCK_AGE}s old), removing it"
+              rm -f "$MUTEX_FILE"
+            else
+              echo "⛔ Deployment already in progress: $LOCK_INFO"
+              echo "Lock file: $MUTEX_FILE (created ${LOCK_AGE}s ago)"
+              exit 1
+            fi
+          fi
+
+          # Créer le mutex
+          mkdir -p "$HOME/.deploy"
+          echo "Platform: ${DEPLOY_PLATFORM} | Environment: ${DEPLOY_ENVIRONMENT} | Started: $(date '+%Y-%m-%d %H:%M:%S') | PID: $$" > "$MUTEX_FILE"
+          echo "✅ Deployment mutex acquired"
 
     - name: Copy deployment script to server
       uses: appleboy/scp-action@v0.1.5

@@ -1,3 +1,65 @@
+## [1.1.2](https://github.com/dediagency/.github/compare/v1.1.1...v1.1.2) (2025-09-23)
+
+
+### Bug Fixes
+
+* correction deploy env ([73a5e38](https://github.com/dediagency/.github/commit/73a5e38826807b1876e312ae24d14a363b4e49c8))
+* revert clean up composer output to avoid false error messages ([f738469](https://github.com/dediagency/.github/commit/f7384693e21a51b2411259de48371ddd8c9e589a))
+
+## [1.1.2](https://github.com/dediagency/.github/compare/v1.1.1...v1.1.2) (2025-09-23)
+
+
+### Bug Fixes
+
+* revert clean up composer output to avoid false error messages ([f738469](https://github.com/dediagency/.github/commit/f7384693e21a51b2411259de48371ddd8c9e589a))
+
+## [1.1.1](https://github.com/dediagency/.github/compare/v1.1.0...v1.1.1) (2025-09-23)
+
+
+### Bug Fixes
+
+* remove health check from deployment process ([2170679](https://github.com/dediagency/.github/commit/217067928aab69203f1c06c83148006c6f3dba18))
+
+## [1.1.0](https://github.com/dediagency/.github/compare/v1.0.4...v1.1.0) (2025-09-23)
+
+
+### Features
+
+* add deployment mutex system to prevent concurrent deployments ([760b160](https://github.com/dediagency/.github/commit/760b16020450fdcef212ab9b32dd196c99498614))
+
+
+### Bug Fixes
+
+* move mutex check before script copy to prevent conflicts ([aea1a36](https://github.com/dediagency/.github/commit/aea1a3609770e363b6923763c754e64667b74157))
+
+## [1.0.4](https://github.com/dediagency/.github/compare/v1.0.3...v1.0.4) (2025-09-23)
+
+
+### Bug Fixes
+
+* clean up composer output to avoid false error messages ([278915a](https://github.com/dediagency/.github/commit/278915abe0483e62fb87d2ad02f95ef2a065d321))
+
+## [1.0.3](https://github.com/dediagency/.github/compare/v1.0.2...v1.0.3) (2025-09-23)
+
+
+### Bug Fixes
+
+* correct python here document syntax error in deps.sh ([9a097bb](https://github.com/dediagency/.github/commit/9a097bb10204c90104b928edba6cf7de0a10460b))
+
+## [1.0.2](https://github.com/dediagency/.github/compare/v1.0.1...v1.0.2) (2025-09-23)
+
+
+### Bug Fixes
+
+* add missing shell property in composite actions ([9707816](https://github.com/dediagency/.github/commit/9707816935667953797f4eb1c6b1c96f2643aad5))
+
+## [1.0.1](https://github.com/dediagency/.github/compare/v1.0.0...v1.0.1) (2025-09-23)
+
+
+### Bug Fixes
+
+* remove problematic assets configuration from semantic-release ([eedc889](https://github.com/dediagency/.github/commit/eedc889534519791b998e639c3e7021183299bf2))
+
 ## 1.0.0 (2025-09-23)
 
 
