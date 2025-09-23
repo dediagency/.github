@@ -1,0 +1,14 @@
+{
+  "name": "@dediagency/github-actions",
+  "version": "0.0.0-development",
+  "description": "GitHub Actions for Dedi Agency deployments",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dediagency/.github.git"
+  },
+  "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "semantic-release": "^22.0.0"
+  }
+}

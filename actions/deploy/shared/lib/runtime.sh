@@ -1,12 +1,48 @@
 #!/bin/bash
 
 run_deploy() {
-    local timestamp release_dir shared_root current_link
+    local timestamp release_dir shared_root current_link previous_release
 
-    timestamp=$(date +%Y%m%d%H%M%S)
+    timestamp=$(get_timestamp)
     release_dir="$DEPLOY_DEPLOY_PATH/releases/$timestamp"
     shared_root="$DEPLOY_DEPLOY_PATH/shared"
     current_link="$DEPLOY_DEPLOY_PATH/current"
+
+    # Sauvegarder la release précédente pour rollback
+    if [ -L "$current_link" ]; then
+        previous_release=$(readlink "$current_link")
+        log "info" "Previous release: $previous_release"
+    else
+        previous_release=""
+    fi
+
+    # Fonction de rollback
+    rollback() {
+        log "error" "Deployment failed, attempting rollback..."
+
+        if [ -d "$release_dir" ]; then
+            log "info" "Cleaning up failed release: $release_dir"
+            rm -rf "$release_dir"
+        fi
+
+        if [ -n "$previous_release" ] && [ -d "$previous_release" ]; then
+            log "info" "Rolling back to: $previous_release"
+            ln -sfn "$previous_release" "$current_link.tmp"
+            mv "$current_link.tmp" "$current_link"
+
+            # Recharger les services avec l'ancienne version
+            commands_reload_services "$DEPLOY_RELOAD_SERVICES"
+
+            log "error" "Rollback completed to previous release"
+        else
+            log "error" "No previous release available for rollback"
+        fi
+
+        exit 1
+    }
+
+    # Configurer le trap pour rollback en cas d'erreur
+    trap rollback ERR
 
     deps_check \
         "$DEPLOY_PHP_BINARY" \
@@ -18,13 +54,17 @@ run_deploy() {
         "$DEPLOY_PERMISSION_METHOD" \
         "$DEPLOY_RELOAD_SERVICES"
 
-    echo "🚀 Starting deployment to ${DEPLOY_ENVIRONMENT}..."
-    echo "📍 Deploy path: ${DEPLOY_DEPLOY_PATH}"
-    echo "🌿 Branch: ${DEPLOY_BRANCH}"
-    echo "🏗️  Platform: ${DEPLOY_PLATFORM}"
+    log "info" "🚀 Starting deployment to ${DEPLOY_ENVIRONMENT}..."
+    log "info" "📍 Deploy path: ${DEPLOY_DEPLOY_PATH}"
+    log "info" "🌿 Branch: ${DEPLOY_BRANCH}"
+    log "info" "🏗️  Platform: ${DEPLOY_PLATFORM}"
+
+    if [ "${DEPLOY_DRY_RUN:-false}" = "true" ]; then
+        log "info" "🧪 DRY-RUN MODE ENABLED - No actual changes will be made"
+    fi
 
     echo "📁 Creating directory structure..."
-    mkdir -p "$DEPLOY_DEPLOY_PATH/releases"
+    dry_run "WRITE" mkdir -p "$DEPLOY_DEPLOY_PATH/releases"
 
     shared_prepare_directories "$DEPLOY_SHARED_DIRS" "$shared_root"
 
@@ -50,19 +90,19 @@ run_deploy() {
         exit 1
     fi
 
-    echo "📦 Cloning repository..."
-    git clone --depth 1 --branch "${DEPLOY_BRANCH}" "git@github.com:${DEPLOY_REPOSITORY}.git" "$release_dir"
+    log "info" "📦 Cloning repository..."
+    retry_with_backoff 3 5 30 git clone --depth 1 --branch "${DEPLOY_BRANCH}" "git@github.com:${DEPLOY_REPOSITORY}.git" "$release_dir"
     cd "$release_dir"
 
-    echo "🔧 Installing PHP dependencies..."
-    "${DEPLOY_PHP_BINARY}" "${DEPLOY_COMPOSER_PATH}" install ${DEPLOY_COMPOSER_INSTALL_ARGS}
+    log "info" "🔧 Installing PHP dependencies..."
+    run_with_timeout 600 "${DEPLOY_PHP_BINARY}" "${DEPLOY_COMPOSER_PATH}" install ${DEPLOY_COMPOSER_INSTALL_ARGS}
 
     if [ -n "${DEPLOY_BUILD_COMMAND}" ]; then
-        echo "🎨 Building assets..."
+        log "info" "🎨 Building assets..."
         if [ -n "${DEPLOY_NPM_INSTALL_COMMAND}" ]; then
-            ${DEPLOY_NPM_INSTALL_COMMAND}
+            run_with_timeout 600 ${DEPLOY_NPM_INSTALL_COMMAND}
         fi
-        ${DEPLOY_BUILD_COMMAND}
+        run_with_timeout 900 ${DEPLOY_BUILD_COMMAND}
     fi
 
     shared_link_directories "$DEPLOY_SHARED_DIRS" "$shared_root" "$release_dir"
@@ -103,9 +143,23 @@ run_deploy() {
 
     commands_run_post_deploy "$DEPLOY_POST_DEPLOY_COMMANDS"
 
-    echo "🔄 Updating current symlink..."
-    ln -sfn "$release_dir" "$current_link.tmp"
-    mv -Tf "$current_link.tmp" "$current_link"
+    # Créer un symlink temporaire pour les tests
+    log "info" "🔄 Creating temporary symlink for testing..."
+    ln -sfn "$release_dir" "$current_link.test"
+
+    # Health check avant activation définitive
+    if [ -n "${DEPLOY_SITE_URL:-}" ]; then
+        log "info" "🏥 Running health check..."
+        if health_check "$DEPLOY_SITE_URL" 5 10; then
+            log "info" "✅ Health check passed"
+        else
+            log "warn" "⚠️  Health check failed, but continuing deployment"
+        fi
+    fi
+
+    log "info" "🔄 Updating current symlink..."
+    mv "$current_link.test" "$current_link.tmp"
+    mv "$current_link.tmp" "$current_link"
 
     commands_reload_services "$DEPLOY_RELOAD_SERVICES"
 
@@ -113,7 +167,12 @@ run_deploy() {
     cd "$DEPLOY_DEPLOY_PATH/releases"
     ls -t | tail -n +4 | xargs -r rm -rf
 
-    echo "✅ Deployment completed successfully!"
+    # Désactiver le trap maintenant que le déploiement est réussi
+    trap - ERR
 
-    echo "🌐 Site available at: ${DEPLOY_SITE_URL}"
+    log "info" "✅ Deployment completed successfully!"
+    log "info" "🌐 Site available at: ${DEPLOY_SITE_URL}"
+
+    # Nettoyage final
+    [ -f "$current_link.test" ] && rm -f "$current_link.test"
 }
