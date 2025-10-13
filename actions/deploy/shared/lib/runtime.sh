@@ -160,7 +160,7 @@ run_deploy() {
 
     log "info" "🔄 Updating current symlink..."
     ln -sfn "$release_dir" "$current_link.tmp"
-    mv "$current_link.tmp" "$current_link"
+    mv -Tf "$current_link.tmp" "$current_link"
 
     commands_reload_services "$DEPLOY_RELOAD_SERVICES"
 
