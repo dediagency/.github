@@ -1,3 +1,10 @@
+## [0.1.1](https://github.com/dediagency/.github/compare/v0.1.0...v0.1.1) (2025-10-13)
+
+
+### Bug Fixes
+
+* correction symlink creation ([847cb73](https://github.com/dediagency/.github/commit/847cb73c1c15b58c0738ebb149c7f35710aea981))
+
 ## [0.1.0](https://github.com/dediagency/.github/compare/v0.0.1...v0.1.0) (2025-09-23)
 
 
