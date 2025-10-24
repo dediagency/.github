@@ -22,7 +22,14 @@ run_deploy() {
 
     # Fonction de rollback avec nettoyage mutex
     rollback() {
-        log "error" "Deployment failed, attempting rollback..."
+        local exit_code="${1:-1}"
+        local error_line="${2:-?}"
+        local error_file="${3:-${BASH_SOURCE[1]:-${BASH_SOURCE[0]}}}"
+        local error_command="${4:-unknown command}"
+
+        log "error" "Deployment failed (exit code ${exit_code}) at ${error_file}:${error_line}"
+        log "error" "Failing command: ${error_command}"
+        log "error" "Attempting rollback..."
 
         if [ -d "$release_dir" ]; then
             log "info" "Cleaning up failed release: $release_dir"
@@ -46,7 +53,7 @@ run_deploy() {
         log "info" "🔓 Releasing deployment mutex (rollback)"
         rm -f "$mutex_file"
 
-        exit 1
+        exit "${exit_code:-1}"
     }
 
     # Fonction de nettoyage pour libérer le mutex en cas d'interruption
@@ -56,7 +63,7 @@ run_deploy() {
     }
 
     # Configurer les traps
-    trap rollback ERR
+    trap 'rollback $? ${BASH_LINENO[0]} "${BASH_SOURCE[0]}" "$BASH_COMMAND"' ERR
     trap cleanup_mutex EXIT INT TERM
 
     deps_check \
