@@ -29,7 +29,7 @@ shared_link_directories() {
 
         mkdir -p "$shared_path"
 
-        if [ -d "$release_path" ] && [ -z "$(ls -A "$shared_path" 2>/dev/null)" ]; then
+        if [ -d "$release_path" ]; then
             echo "  ↪️ Seeding initial contents of $dir into shared directory"
             cp -a "$release_path/." "$shared_path/"
         fi
