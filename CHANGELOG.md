@@ -1,3 +1,10 @@
+## [0.1.3](https://github.com/dediagency/.github/compare/v0.1.2...v0.1.3) (2025-10-30)
+
+
+### Bug Fixes
+
+* shared dir symlinks conditions ([5cf92de](https://github.com/dediagency/.github/commit/5cf92dee6630ff32c1352c39913e59b37953c119))
+
 ## [0.1.2](https://github.com/dediagency/.github/compare/v0.1.1...v0.1.2) (2025-10-30)
 
 
