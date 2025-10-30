@@ -24,8 +24,19 @@ shared_link_directories() {
 
     echo "🔗 Creating symlinks to shared directories..."
     json_array_to_lines "$shared_dirs_json" | while IFS= read -r dir; do
-        rm -rf "$release_dir/$dir"
-        ln -sf "$shared_root/$dir" "$release_dir/$dir"
+        local release_path="$release_dir/$dir"
+        local shared_path="$shared_root/$dir"
+
+        mkdir -p "$shared_path"
+
+        if [ -d "$release_path" ] && [ -z "$(ls -A "$shared_path" 2>/dev/null)" ]; then
+            echo "  ↪️ Seeding initial contents of $dir into shared directory"
+            cp -a "$release_path/." "$shared_path/"
+        fi
+
+        rm -rf "$release_path"
+        ln -sfn "$shared_path" "$release_path"
+        echo "✅ $shared_path symlinked"
     done
 }
 
